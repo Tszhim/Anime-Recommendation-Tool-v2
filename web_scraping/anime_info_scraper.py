@@ -34,6 +34,7 @@ def parse_anime_info(info: List[WebElement]) -> str:
     show_type = None
     episodes = None
     premiered = None
+    studios = None
     source = None
     genres = None
     theme = None
@@ -44,8 +45,34 @@ def parse_anime_info(info: List[WebElement]) -> str:
 
     for element in info:
         text = element.text
-        text = text.split(": ", 1)
-        print(text)
+        if len(text) == 0:
+            continue
+
+        text = text.split(": ")
+        label, content = text[0], text[1]
+
+        if label == "Type":
+            show_type = content
+        elif label == "Episodes":
+            episodes = int(content)
+        elif label == "Premiered":
+            premiered = content
+        elif label == "Studios":
+            studios = content
+        elif label == "Source":
+            source = content
+        elif label == "Genres":
+            genres = content
+        elif label == "Themes":
+            theme = content
+        elif label == "Rating":
+            age_rating = content
+        elif label == "Score":
+            score = content
+        elif label == "Ranked":
+            ranking = content
+        elif label == "Popularity":
+            popularity_rank = content
 
     return "hello world"
 
