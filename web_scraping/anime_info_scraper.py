@@ -1,15 +1,11 @@
-import csv
-import sys
-import traceback
-import time
-import random
-from os import path
-from typing import List, Set
 import pickle
+import sys
+import time
+from typing import List
 from pathlib import Path
 
 from selenium import webdriver
-from selenium.common import NoSuchElementException, TimeoutException
+from selenium.common import TimeoutException
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -18,11 +14,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.remote.webelement import WebElement
 from webdriver_manager.chrome import ChromeDriverManager
 
-DRIV_VER = "103.0.5060.53"
+EXE_LOC = "C:\\Program Files\\Google\\Chrome Beta\\Application\\chrome.exe"
+DRIV_VER = "104.0.5112.20"
 TOTAL_NUM_ANIME = 12806
 ANIME_DATA_F = "anime_data.csv"
 NUM_ANIME_SCRAPED_F = "num_anime_scraped.txt"
-
 
 # Read the current number of animes' info that have been scraped from NUM_ANIME_SCRAPED_F
 def get_num_anime_scraped() -> int:
@@ -34,13 +30,19 @@ def get_num_anime_scraped() -> int:
     else:
         return 0
 
-
 # Write the current number of animes' info that have been scraped to NUM_ANIME_SCRAPED_F
 def save_num_anime_scraped(num_scraped: int) -> None:
     with open(NUM_ANIME_SCRAPED_F, 'wb') as file:
         pickle.dump(num_scraped, file)
 
+# Get an instance of Selenium webdriver with set configurations.
+def get_driver() -> webdriver:
+    opts = Options()
+    opts.binary_location = EXE_LOC
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager(version=DRIV_VER).install()), options=opts)
+    return driver
 
+# Given an instance of a webdriver and a URL, navigate to the URL. If not successful, terminate the program.
 def navigate_to(driver: webdriver, url: str) -> None:
     try:
         driver.get(url)
@@ -48,7 +50,7 @@ def navigate_to(driver: webdriver, url: str) -> None:
         driver.quit()
         sys.exit("Failed to load page. Terminating program.")
 
-
+# Remove cookies popup on "https://myanimelist.net". If not successful, terminate the program.
 def remove_cookies_popup(driver: webdriver) -> None:
     try:
         popup = WebDriverWait(driver, 20).until(
@@ -57,7 +59,6 @@ def remove_cookies_popup(driver: webdriver) -> None:
     except TimeoutException:
         driver.quit()
         sys.exit("Did not find popup.")
-
 
 # Parse all anime info from its webpage, convert it to a string and return it
 def parse_anime_info(info: List[WebElement]) -> str:
@@ -85,15 +86,26 @@ def parse_anime_info(info: List[WebElement]) -> str:
             show_type = content
         elif label == "Episodes":
             episodes = content
-        elif label == "Premiered":
-            premiered = content
+        elif label == "Aired":
+            start_month = content.split(",")[0]
+            start_year = content.split(", ")[1]
+            if start_month.startswith("Jan") or start_month.startswith("Feb"):
+                premiered = "Winter " + start_year[0:4]
+            elif start_month.startswith("Mar") or start_month.startswith("Apr") or start_month.startswith("May"):
+                premiered = "Spring " + start_year[0:4]
+            elif start_month.startswith("Jun") or start_month.startswith("Jul") or start_month.startswith("Aug"):
+                premiered = "Summer " + start_year[0:4]
+            elif start_month.startswith("Sep") or start_month.startswith("Oct") or start_month.startswith("Nov"):
+                premiered = "Summer " + start_year[0:4]
+            elif start_month.startswith("Dec"):
+                premiered = "Winter " + str(int(start_year[0:4]) + 1)
         elif label == "Studios":
             studios = "\"" + content + "\""
         elif label == "Source":
             source = content
-        elif label == "Genres":
+        elif label == "Genre" or label == "Genres":
             genres = "\"" + content + "\""
-        elif label == "Themes":
+        elif label == "Theme" or label == "Themes":
             theme = "\"" + content + "\""
         elif label == "Rating":
             age_rating = content
@@ -109,7 +121,6 @@ def parse_anime_info(info: List[WebElement]) -> str:
                   + genres + "," + theme + "," + age_rating + "," + score + "," + ranking + "," + popularity_rank
 
     return parsed_info
-
 
 # Append an anime that has been fully scraped to ANIME_DATA_f
 def append_anime_to_csv(csv_line: str):
@@ -130,7 +141,7 @@ def append_anime_to_csv(csv_line: str):
 NUM_ANIME_SCRAPED = get_num_anime_scraped()
 
 # Setting up webdriver and opening webpage
-driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager(version=DRIV_VER).install()))
+driver = get_driver()
 navigate_to(driver, "https://myanimelist.net/topanime.php")
 remove_cookies_popup(driver)
 
@@ -174,4 +185,5 @@ for page in range(NUM_ANIME_SCRAPED, TOTAL_NUM_ANIME, 50):
         time.sleep(5)
 
 
+driver.quit()
 print("Finished collecting data")
