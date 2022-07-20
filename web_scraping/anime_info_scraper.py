@@ -24,6 +24,7 @@ ANIME_DATA_F = "anime_data.csv"
 NUM_ANIME_SCRAPED_F = "num_anime_scraped.txt"
 
 
+# Read the current number of animes' info that have been scraped from NUM_ANIME_SCRAPED_F
 def get_num_anime_scraped() -> int:
     path = Path(NUM_ANIME_SCRAPED_F)
     if path.is_file():
@@ -34,6 +35,7 @@ def get_num_anime_scraped() -> int:
         return 0
 
 
+# Write the current number of animes' info that have been scraped to NUM_ANIME_SCRAPED_F
 def save_num_anime_scraped(num_scraped: int) -> None:
     with open(NUM_ANIME_SCRAPED_F, 'wb') as file:
         pickle.dump(num_scraped, file)
@@ -57,6 +59,7 @@ def remove_cookies_popup(driver: webdriver) -> None:
         sys.exit("Did not find popup.")
 
 
+# Parse all anime info from its webpage, convert it to a string and return it
 def parse_anime_info(info: List[WebElement]) -> str:
     show_type = ""
     episodes = ""
@@ -108,6 +111,7 @@ def parse_anime_info(info: List[WebElement]) -> str:
     return parsed_info
 
 
+# Append an anime that has been fully scraped to ANIME_DATA_f
 def append_anime_to_csv(csv_line: str):
     path = Path(ANIME_DATA_F)
     if not path.is_file():
@@ -130,6 +134,7 @@ driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager(version=DRIV
 navigate_to(driver, "https://myanimelist.net/topanime.php")
 remove_cookies_popup(driver)
 
+# Loop through each page of the "Top Anime" page
 for page in range(NUM_ANIME_SCRAPED, TOTAL_NUM_ANIME, 50):
     ranking_page = f"https://myanimelist.net/topanime.php?limit={NUM_ANIME_SCRAPED}"
     navigate_to(driver, ranking_page)
@@ -138,7 +143,7 @@ for page in range(NUM_ANIME_SCRAPED, TOTAL_NUM_ANIME, 50):
     anime_info_links = []
     element_list = driver.execute_script("return document.querySelectorAll(\".anime_ranking_h3\")")
 
-    # Get links to each anime on the current webpage and add it to a list
+    # Get links to each of the 50 anime on the current webpage and add it to a list
     for element in element_list:
         anchor = element.find_element(By.TAG_NAME, "a")
         anime_info_links.append(anchor.get_attribute("href"))
