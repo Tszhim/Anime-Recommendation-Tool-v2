@@ -18,8 +18,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 EXE_LOC = "C:\\Program Files\\Google\\Chrome Beta\\Application\\chrome.exe"
 DRIV_VER = "104.0.5112.20"
 TOTAL_NUM_ANIME = 12806
-ANIME_DATA_F = "../csv_output/anime_data.csv"
-NUM_ANIME_SCRAPED_F = "../csv_output/num_anime_scraped.txt"
+ANIME_DATA_F = "csv_output/anime_data.csv"
+NUM_ANIME_SCRAPED_F = "csv_output/num_anime_scraped.txt"
 
 # Read the current number of animes' info that have been scraped from NUM_ANIME_SCRAPED_F
 def get_num_anime_scraped() -> int:
