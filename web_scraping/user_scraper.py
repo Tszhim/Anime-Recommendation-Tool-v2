@@ -18,8 +18,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 # Driver/file/time settings.
 EXE_LOC = "C:\\Program Files\\Google\\Chrome Beta\\Application\\chrome.exe"
 DRIV_VERS = '104.0.5112.20'
-USER_DATA_F = "user_data.csv"
-USERNAME_F = "usernames.csv"
+USER_DATA_F = "../csv_output/user_data.csv"
+USERNAME_F = "../csv_output/usernames.csv"
 DELAY_MIN = 10
 DELAY_MAX = 15
 POSTS_CT = 50
@@ -161,7 +161,7 @@ def store_user_data(driver: webdriver, anime_lists: Set[str], searched_users: Se
                                                                           progress_containers, status_containers):
                     title = title_ele.text
                     score = score_ele.text
-                    progress = progress_ele.text
+                    progress = progress_ele.split('/')[0].strip()
                     status = status_ele.get_attribute("class").split(' ')[2]
 
                     # Skip if any fields are empty.

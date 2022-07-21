@@ -14,11 +14,12 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.remote.webelement import WebElement
 from webdriver_manager.chrome import ChromeDriverManager
 
+# Define constants.
 EXE_LOC = "C:\\Program Files\\Google\\Chrome Beta\\Application\\chrome.exe"
 DRIV_VER = "104.0.5112.20"
 TOTAL_NUM_ANIME = 12806
-ANIME_DATA_F = "anime_data.csv"
-NUM_ANIME_SCRAPED_F = "num_anime_scraped.txt"
+ANIME_DATA_F = "../csv_output/anime_data.csv"
+NUM_ANIME_SCRAPED_F = "../csv_output/num_anime_scraped.txt"
 
 # Read the current number of animes' info that have been scraped from NUM_ANIME_SCRAPED_F
 def get_num_anime_scraped() -> int:
@@ -87,18 +88,23 @@ def parse_anime_info(info: List[WebElement]) -> str:
         elif label == "Episodes":
             episodes = content
         elif label == "Aired":
-            start_month = content.split(",")[0]
-            start_year = content.split(", ")[1]
-            if start_month.startswith("Jan") or start_month.startswith("Feb"):
-                premiered = "Winter " + start_year[0:4]
-            elif start_month.startswith("Mar") or start_month.startswith("Apr") or start_month.startswith("May"):
-                premiered = "Spring " + start_year[0:4]
-            elif start_month.startswith("Jun") or start_month.startswith("Jul") or start_month.startswith("Aug"):
-                premiered = "Summer " + start_year[0:4]
-            elif start_month.startswith("Sep") or start_month.startswith("Oct") or start_month.startswith("Nov"):
-                premiered = "Summer " + start_year[0:4]
-            elif start_month.startswith("Dec"):
-                premiered = "Winter " + str(int(start_year[0:4]) + 1)
+            try:
+                start_month = content[0:4]
+                split_mt_yr = content.split(", ") if len(content.split(", ")) > 0 else content.split(" ")
+                start_year = split_mt_yr[1]
+
+                if start_month.startswith("Jan") or start_month.startswith("Feb"):
+                    premiered = "Winter " + start_year[0:4]
+                elif start_month.startswith("Mar") or start_month.startswith("Apr") or start_month.startswith("May"):
+                    premiered = "Spring " + start_year[0:4]
+                elif start_month.startswith("Jun") or start_month.startswith("Jul") or start_month.startswith("Aug"):
+                    premiered = "Summer " + start_year[0:4]
+                elif start_month.startswith("Sep") or start_month.startswith("Oct") or start_month.startswith("Nov"):
+                    premiered = "Fall " + start_year[0:4]
+                elif start_month.startswith("Dec"):
+                    premiered = "Winter " + str(int(start_year[0:4]) + 1)
+            except IndexError:
+                continue
         elif label == "Studios":
             studios = "\"" + content + "\""
         elif label == "Source":
