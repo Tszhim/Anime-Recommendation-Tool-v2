@@ -17,8 +17,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 EXE_LOC = "C:\\Program Files\\Google\\Chrome Beta\\Application\\chrome.exe"
 DRIV_VER = "104.0.5112.20"
 TOTAL_NUM_ANIME = 12806
-ANIME_DATA_F = "anime_data.csv"
-NUM_ANIME_SCRAPED_F = "num_anime_scraped.txt"
+ANIME_DATA_F = "data/anime_data.csv"
+NUM_ANIME_SCRAPED_F = "data/num_anime_scraped.txt"
 
 # Read the current number of animes' info that have been scraped from NUM_ANIME_SCRAPED_F
 def get_num_anime_scraped() -> int:
@@ -39,6 +39,7 @@ def save_num_anime_scraped(num_scraped: int) -> None:
 def get_driver() -> webdriver:
     opts = Options()
     opts.binary_location = EXE_LOC
+    opts.headless = True
     driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager(version=DRIV_VER).install()), options=opts)
     return driver
 
@@ -76,10 +77,11 @@ def parse_anime_info(info: List[WebElement]) -> str:
 
     for element in info:
         text = element.text
-        if len(text) == 0:
+        text = text.split(": ")
+
+        if len(text) != 2:
             continue
 
-        text = text.split(": ")
         label, content = text[0], text[1]
 
         if label == "Type":
@@ -87,18 +89,23 @@ def parse_anime_info(info: List[WebElement]) -> str:
         elif label == "Episodes":
             episodes = content
         elif label == "Aired":
-            start_month = content.split(",")[0]
-            start_year = content.split(", ")[1]
-            if start_month.startswith("Jan") or start_month.startswith("Feb"):
-                premiered = "Winter " + start_year[0:4]
-            elif start_month.startswith("Mar") or start_month.startswith("Apr") or start_month.startswith("May"):
-                premiered = "Spring " + start_year[0:4]
-            elif start_month.startswith("Jun") or start_month.startswith("Jul") or start_month.startswith("Aug"):
-                premiered = "Summer " + start_year[0:4]
-            elif start_month.startswith("Sep") or start_month.startswith("Oct") or start_month.startswith("Nov"):
-                premiered = "Summer " + start_year[0:4]
-            elif start_month.startswith("Dec"):
-                premiered = "Winter " + str(int(start_year[0:4]) + 1)
+            try:
+                start_month = content[0:4]
+                split_mt_yr = content.split(", ") if len(content.split(", ")) > 0 else content.split(" ")
+                start_year = split_mt_yr[1]
+
+                if start_month.startswith("Jan") or start_month.startswith("Feb"):
+                    premiered = "Winter " + start_year[0:4]
+                elif start_month.startswith("Mar") or start_month.startswith("Apr") or start_month.startswith("May"):
+                    premiered = "Spring " + start_year[0:4]
+                elif start_month.startswith("Jun") or start_month.startswith("Jul") or start_month.startswith("Aug"):
+                    premiered = "Summer " + start_year[0:4]
+                elif start_month.startswith("Sep") or start_month.startswith("Oct") or start_month.startswith("Nov"):
+                    premiered = "Fall " + start_year[0:4]
+                elif start_month.startswith("Dec"):
+                    premiered = "Winter " + str(int(start_year[0:4]) + 1)
+            except IndexError:
+                continue
         elif label == "Studios":
             studios = "\"" + content + "\""
         elif label == "Source":
@@ -149,7 +156,7 @@ remove_cookies_popup(driver)
 for page in range(NUM_ANIME_SCRAPED, TOTAL_NUM_ANIME, 50):
     ranking_page = f"https://myanimelist.net/topanime.php?limit={NUM_ANIME_SCRAPED}"
     navigate_to(driver, ranking_page)
-    time.sleep(2)
+    time.sleep(3)
 
     anime_info_links = []
     element_list = driver.execute_script("return document.querySelectorAll(\".anime_ranking_h3\")")
@@ -182,7 +189,7 @@ for page in range(NUM_ANIME_SCRAPED, TOTAL_NUM_ANIME, 50):
         save_num_anime_scraped(NUM_ANIME_SCRAPED)
 
         # Sleep thread to avoid sending requests to MAL servers too fast
-        time.sleep(5)
+        time.sleep(2)
 
 
 driver.quit()
