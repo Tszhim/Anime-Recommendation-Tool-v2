@@ -1,5 +1,4 @@
 ﻿import csv
-import sys
 import traceback
 import time
 import random
@@ -8,31 +7,29 @@ from typing import List, Set
 
 from selenium import webdriver
 from selenium.common import NoSuchElementException, TimeoutException
-from selenium.webdriver.chrome.service import Service as ChromeService
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
 
-# Driver/file/time settings.
-EXE_LOC = "C:\\Program Files\\Google\\Chrome Beta\\Application\\chrome.exe"
-DRIV_VERS = '104.0.5112.20'
+from web_scraping.scraper_utils import get_driver, navigate_to, remove_cookies_popup, scroll_to_bottom, get_lapsed_time
+
+# Declare constants.
 USER_DATA_F = "csv_output/user_data.csv"
 USERNAME_F = "csv_output/usernames.csv"
 DELAY_MIN = 10
 DELAY_MAX = 15
 POSTS_CT = 50
-start = time.time()
 
-
-# Returns a set of usernames that were already searched from USERNAME_F. If the file does not exist, create it and establish relevant headers.
 def get_searched_users() -> Set[str]:
+    """
+    Reads USERNAME_F to extract user profiles already scraped. If the file does not exist, create it and establish relevant headers.
+    :return: set of scraped usernames.
+    """
     collected_users = set()
     if path.exists(USERNAME_F):
         with open(USERNAME_F, 'r', encoding='UTF8') as f:
             reader = csv.reader(f)
-            header = next(reader)
+            next(reader)
             for row in reader:
                 collected_users.add(row[0])
             f.close()
@@ -43,59 +40,24 @@ def get_searched_users() -> Set[str]:
             f.close()
     return collected_users
 
-
-# Creates USER_DATA_F if it does not exist and establishes relevant headers.
 def setup_user_data_file() -> None:
+    """
+    Creates USER_DATA_F if it does not exist and establishes relevant headers.
+    :return: None
+    """
     if not path.exists(USER_DATA_F):
         with open(USER_DATA_F, 'x', encoding='UTF8', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(["Username", "Anime_Title", "Score", "Watch_Progress", "Watch_Status"])
             f.close()
 
-
-# Get an instance of Selenium webdriver with set configurations.
-def get_driver() -> webdriver:
-    opts = Options()
-    # opts.headless = True
-    opts.binary_location = EXE_LOC
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager(version=DRIV_VERS).install()), options=opts)
-    return driver
-
-
-# Given an instance of a webdriver and a URL, navigate to the URL. If not successful, terminate the program.
-def navigate_to(driver: webdriver, url: str) -> None:
-    try:
-        driver.get(url)
-    except TimeoutException:
-        driver.quit()
-        sys.exit("Failed to load page. Terminating program.")
-
-
-# Scrolls to the bottom of the current webpage.
-def scroll_to_bottom(driver: webdriver) -> None:
-    last_height = driver.execute_script("return document.body.scrollHeight")
-    while True:
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(random.uniform(DELAY_MIN, DELAY_MAX))
-        new_height = driver.execute_script("return document.body.scrollHeight")
-        if new_height == last_height:
-            break
-        last_height = new_height
-
-
-# Remove cookies popup on "https://myanimelist.net". If not successful, terminate the program.
-def remove_cookies_popup(driver: webdriver) -> None:
-    try:
-        popup = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'OK')]")))
-        driver.execute_script("arguments[0].click();", popup)
-    except TimeoutException:
-        driver.quit()
-        sys.exit("Did not find popup.")
-
-
-# Retrieve the number of forum posts specified by num. Returns the URLs as a list of strings.
 def get_forum_posts(driver: webdriver, num: int) -> List[str]:
+    """
+    Retrieve the number of forum posts specified by num.
+    :param: driver: selenium webdriver instance.
+    :param: num: number of forum posts to retrieve.
+    :return: list of forum post URLs.
+    """
     posts = []
     for show in range(0, num, 50):
         navigate_to(driver, f"https://myanimelist.net/forum/?board=1&show={show}")
@@ -109,8 +71,13 @@ def get_forum_posts(driver: webdriver, num: int) -> List[str]:
     return posts
 
 
-# Given a list of forum posts, return users' anime lists URLs as a set of strings.
 def get_anime_lists(driver: webdriver, posts: List[str]) -> Set[str]:
+    """
+    Retrieve users' anime lists URLs.
+    :param driver: selenium webdriver instance.
+    :param posts: list of forum post URLs.
+    :return: set of anime list URLs.
+    """
     users = set()
     for post in posts:
         navigate_to(driver, post)
@@ -122,9 +89,15 @@ def get_anime_lists(driver: webdriver, posts: List[str]) -> Set[str]:
                 users.add(user_container.get_attribute("href").replace("profile", "animelist"))
     return users
 
-
-# Given a list of anime lists and a set of already searched users, store all new data into respective USER_DATA_F and OUTPUT_F files.
 def store_user_data(driver: webdriver, anime_lists: Set[str], searched_users: Set[str]) -> None:
+    """
+    Store all user data into respective USER_DATA_F and OUTPUT_F files.
+    :param driver: selenium webdriver instance.
+    :param anime_lists: set of anime list URLs.
+    :param searched_users: set of already scraped users.
+    :return: None
+    """
+
     for anime_list in anime_lists:
         navigate_to(driver, anime_list)
         time.sleep(random.uniform(DELAY_MIN, DELAY_MAX))
@@ -193,11 +166,6 @@ def store_user_data(driver: webdriver, anime_lists: Set[str], searched_users: Se
 
         # For metrics.
         print(get_lapsed_time())
-
-
-# Returns the amount of time lapsed from the start of execution to present.
-def get_lapsed_time() -> float:
-    return time.time() - start
 
 
 # Get list of usernames that were already searched.
