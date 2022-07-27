@@ -61,8 +61,9 @@ def parse_anime_info(info: List[WebElement]) -> List[str]:
         text = element.text
         if len(text) == 0:
             continue
-
         text = text.split(": ")
+        if len(text) < 2:
+            continue
         label, content = text[0], text[1]
 
         if label == "Type":
