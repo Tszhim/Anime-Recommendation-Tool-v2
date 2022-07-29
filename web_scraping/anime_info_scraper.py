@@ -13,7 +13,7 @@ from web_scraping.scraper_utils import get_driver, navigate_to, remove_cookies_p
 # Define constants.
 ANIME_DATA_F = "csv_output/anime_data.csv"
 NUM_ANIME_SCRAPED_F = "csv_output/num_anime_scraped.txt"
-TOTAL_NUM_ANIME = 12806
+TOTAL_NUM_ANIME = 12831
 
 def get_num_anime_scraped() -> int:
     """
@@ -151,7 +151,7 @@ for page in range(NUM_ANIME_SCRAPED, TOTAL_NUM_ANIME, 50):
     # Loop through each link and collect information about the anime, then append it to .csv file.
     for link in anime_info_links:
         navigate_to(driver, link)
-        time.sleep(2)
+        time.sleep(1)
 
         # Get the title of the anime (english if exists, then japanese).
         title_element = driver.execute_script("return document.querySelectorAll(\".h1-title\")")[0]
@@ -177,7 +177,7 @@ for page in range(NUM_ANIME_SCRAPED, TOTAL_NUM_ANIME, 50):
         save_num_anime_scraped(NUM_ANIME_SCRAPED)
 
         # Sleep thread to avoid sending requests to MAL servers too fast.
-        time.sleep(2)
+        time.sleep(1)
 
 driver.quit()
 print("Finished collecting data")
