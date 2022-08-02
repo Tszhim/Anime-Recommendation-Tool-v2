@@ -1,3 +1,4 @@
+import csv
 import pickle
 import time
 from typing import List
@@ -5,13 +6,14 @@ from pathlib import Path
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.common.exceptions import NoSuchElementException
 
 from web_scraping.scraper_utils import get_driver, navigate_to, remove_cookies_popup
 
 # Define constants.
 ANIME_DATA_F = "csv_output/anime_data.csv"
 NUM_ANIME_SCRAPED_F = "csv_output/num_anime_scraped.txt"
-TOTAL_NUM_ANIME = 12806
+TOTAL_NUM_ANIME = 12831
 
 def get_num_anime_scraped() -> int:
     """
@@ -26,6 +28,7 @@ def get_num_anime_scraped() -> int:
     else:
         return 0
 
+
 def save_num_anime_scraped(num_scraped: int) -> None:
     """
     Write to NUM_ANIME_SCRAPED_F to save number of already scraped anime.
@@ -35,7 +38,8 @@ def save_num_anime_scraped(num_scraped: int) -> None:
     with open(NUM_ANIME_SCRAPED_F, 'wb') as file:
         pickle.dump(num_scraped, file)
 
-def parse_anime_info(info: List[WebElement]) -> str:
+
+def parse_anime_info(info: List[WebElement]) -> List[str]:
     """
     Parse all anime info from extracted webelements.
     :param info: list of webelements from anime webpage.
@@ -57,8 +61,9 @@ def parse_anime_info(info: List[WebElement]) -> str:
         text = element.text
         if len(text) == 0:
             continue
-
         text = text.split(": ")
+        if len(text) < 2:
+            continue
         label, content = text[0], text[1]
 
         if label == "Type":
@@ -84,13 +89,13 @@ def parse_anime_info(info: List[WebElement]) -> str:
             except IndexError:
                 continue
         elif label == "Studios":
-            studios = "\"" + content + "\""
+            studios = content
         elif label == "Source":
             source = content
         elif label == "Genre" or label == "Genres":
-            genres = "\"" + content + "\""
+            genres = content
         elif label == "Theme" or label == "Themes":
-            theme = "\"" + content + "\""
+            theme = content
         elif label == "Rating":
             age_rating = content
         elif label == "Score":
@@ -101,33 +106,28 @@ def parse_anime_info(info: List[WebElement]) -> str:
             popularity_rank = content.split("#")[1]
 
     # show_type,episodes,premiered,studios,source,genres,theme,age_rating,score,ranking,popularity_rank
-    parsed_info = show_type + "," + episodes + "," + premiered + "," + studios + "," + source + "," \
-                  + genres + "," + theme + "," + age_rating + "," + score + "," + ranking + "," + popularity_rank
+    parsed_info = [show_type, episodes, premiered, studios, source, genres, theme, age_rating, score, ranking, popularity_rank]
 
     return parsed_info
 
-def append_anime_to_csv(csv_line: str) -> None:
+
+def create_anime_data_file() -> None:
     """
-    Append scraped anime entry to the end of ANIME_DATA_F.
-    :param csv_line: string ready to be written to ANIME_DATA_F.
+    Creates ANIME_DATA_F if it does not exist and establishes relevant headers.
     :returns: None
     """
     path = Path(ANIME_DATA_F)
     if not path.is_file():
-        with open(ANIME_DATA_F, 'w', encoding="utf-8") as file:
+        with open(ANIME_DATA_F, 'w', encoding="utf-8", newline="") as file:
             # If csv file doesn't exist, create and add column labels.
-            column_labels = "title,show_type,episodes,premiered,studios,source," \
-                            "genres,theme,age_rating,score,ranking,popularity_rank\n"
-            file.write(column_labels)
-
-    # Append anime info to csv.
-    with open(ANIME_DATA_F, 'a', encoding="utf-8") as file:
-        file.write(csv_line)
-        file.write("\n")
+            writer = csv.writer(file)
+            writer.writerow(["title", "show_type", "episodes", "premiered", "studios", "source",
+                             "genres", "theme", "age_rating", "score", "ranking", "popularity_rank"])
 
 
 # Maintain a counter storing number of scraped animes.
 NUM_ANIME_SCRAPED = get_num_anime_scraped()
+create_anime_data_file()
 
 # Setting up webdriver and opening webpage.
 driver = get_driver()
@@ -151,27 +151,33 @@ for page in range(NUM_ANIME_SCRAPED, TOTAL_NUM_ANIME, 50):
     # Loop through each link and collect information about the anime, then append it to .csv file.
     for link in anime_info_links:
         navigate_to(driver, link)
-        time.sleep(2)
+        time.sleep(1)
 
-        # Get the title of the anime.
-        title_element = driver.execute_script("return document.querySelectorAll(\".title-name\")")[0]
-        title_name = title_element.find_element(By.TAG_NAME, "strong").text
-        title_name = "\"" + title_name + "\""
+        # Get the title of the anime (english if exists, then japanese).
+        title_element = driver.execute_script("return document.querySelectorAll(\".h1-title\")")[0]
+
+        try:
+            title_name = title_element.find_element(By.CLASS_NAME, "title-english").text
+        except NoSuchElementException:
+            title_name = title_element.find_element(By.TAG_NAME, "strong").text
 
         # Get other details about the anime.
         leftside_info = driver.execute_script("return document.querySelectorAll(\".leftside .spaceit_pad\")")
         parsed_info = parse_anime_info(leftside_info)
 
         # Append info to csv file.
-        csv_line = title_name + "," + parsed_info
+        csv_line = [title_name] + parsed_info
         print(csv_line)
-        append_anime_to_csv(csv_line)
+
+        with open(ANIME_DATA_F, 'a', encoding="utf-8", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(csv_line)
 
         NUM_ANIME_SCRAPED += 1
         save_num_anime_scraped(NUM_ANIME_SCRAPED)
 
         # Sleep thread to avoid sending requests to MAL servers too fast.
-        time.sleep(5)
+        time.sleep(1)
 
 driver.quit()
 print("Finished collecting data")
