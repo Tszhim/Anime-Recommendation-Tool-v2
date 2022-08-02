@@ -74,6 +74,3 @@ def get_full_merge(connection, meta_data) -> List[Tuple[str, ...]]:
 
     res = connection.execute(query)
     return res.fetchall()
-
-
-

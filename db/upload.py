@@ -39,7 +39,7 @@ def create_tables(engine, meta_data) -> None:
                       Column("ANIME_ID", Integer, ForeignKey('anime_data.ANIME_ID')),
                       Column("SCORE", Integer),
                       Column("CURR_EPISODE", Integer),
-                      Column("WATCH_STATUS", String(9)))
+                      Column("WATCH_STATUS", String(11)))
 
     meta_data.create_all(engine)
 
@@ -59,6 +59,7 @@ def add_anime_data(connection, meta_data) -> None:
 
             # Scan through each row and parse/cast appropriately.
             for row in reader:
+                print(row)
                 entry = {"ANIME_TITLE": row[0], "ANIME_SHOW_TYPE": row[1], "ANIME_PREMIERED": row[3],
                          "ANIME_STUDIOS": row[4], "ANIME_SOURCE": row[5], "ANIME_GENRES": row[6],
                          "ANIME_THEMES": row[7], "ANIME_AGE_RATING": row[8], "ANIME_SCORE": float(row[9]),
@@ -115,7 +116,7 @@ def add_user_data(connection, meta_data) -> None:
                 anime_title = row[1]
                 anime_id_query = select(anime_data_table.columns.ANIME_ID).where(anime_data_table.columns.ANIME_TITLE == anime_title)
                 anime_id_res = connection.execute(anime_id_query).fetchone()
-                anime_id = anime_id_res[0]
+                anime_id = None if not anime_id_res else anime_id_res[0]
 
                 # Step 4:
                 entry = {"USER_ID": user_id, "ANIME_ID": anime_id, "WATCH_STATUS": row[4]}
@@ -123,7 +124,7 @@ def add_user_data(connection, meta_data) -> None:
                 if row[2] != "-":
                     entry["SCORE"] = int(float(row[2]))
                 if row[3] != '-':
-                    entry["WATCH_PROGRESS"] = row[3]
+                    entry["CURR_EPISODE"] = row[3]
 
                 connection.execute(user_data_table.insert(), entry)
 
@@ -142,8 +143,8 @@ def valid_users() -> Set[str]:
             collected_users.add(row[0])
         f.close()
 
-    df = pd.read_csv("user_data.csv")
-    for user in collected_users:
+    df = pd.read_csv(USER_DATA_F)
+    for user in collected_users.copy():
         user_df = df.loc[df["Username"] == user]
         watching = user_df.loc[user_df["Watch_Status"] == "watching"].shape[0]
         completed = user_df.loc[user_df["Watch_Status"] == "completed"].shape[0]
