@@ -27,7 +27,6 @@ def get_driver() -> webdriver:
     driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager(version=DRIV_VERS).install()), options=opts)
     return driver
 
-# Given an instance of a webdriver and a URL, navigate to the URL. If not successful, terminate the program.
 def navigate_to(driver: webdriver, url: str) -> None:
     """
     Navigate to specified URL on browser.

@@ -134,7 +134,7 @@ def store_user_data(driver: webdriver, anime_lists: Set[str], searched_users: Se
                                                                           progress_containers, status_containers):
                     title = title_ele.text
                     score = score_ele.text
-                    progress = progress_ele.split('/')[0].strip()
+                    progress = progress_ele.text.split('/')[0].strip()
                     status = status_ele.get_attribute("class").split(' ')[2]
 
                     # Skip if any fields are empty.
